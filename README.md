@@ -39,6 +39,7 @@
 curl -o https://si.o1o.zip  # 国内Nas用户推荐
 or
 curl -O https://raw.githubusercontent.com/Lord2333/seeder_improved/main/seeder_improved.sh
+```
 
 ### 2. 设置执行权限
 ```bash
