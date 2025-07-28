@@ -224,4 +224,5 @@ seeder_improved/
 ---
 
 **感谢使用 Seeder Improved！** 🎉 
+
 ![访客计数](https://count.getloli.com/@:seeder_improved?name=%3Aseeder_improved&theme=gelbooru&padding=7&offset=0&align=center&scale=1&pixelated=1&darkmode=auto)
