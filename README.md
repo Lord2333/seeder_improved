@@ -36,7 +36,7 @@
 
 ### 1. 下载脚本
 ```bash
-curl -o https://si.o1o.zip  # 国内Nas用户推荐
+curl -o https://gan.n1ma.de/https://raw.githubusercontent.com/Lord2333/seeder_improved/main/seeder_improved.sh  # 国内Nas用户推荐
 or
 curl -O https://raw.githubusercontent.com/Lord2333/seeder_improved/main/seeder_improved.sh
 ```
