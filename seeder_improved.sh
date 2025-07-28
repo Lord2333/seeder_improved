@@ -4,9 +4,46 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ========================================
 # 版本信息
 # ========================================
-SCRIPT_VERSION="1.0.1"
+SCRIPT_VERSION="1.0.2"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/Lord2333/seeder_improved/main/seeder_improved.sh"
 GITHUB_REPO_URL="https://github.com/Lord2333/seeder_improved"
+
+# ========================================
+# 通用工具函数
+# ========================================
+
+# 清屏函数
+clear_screen() {
+    if command -v clear &>/dev/null; then
+        clear
+    else
+        printf "\033[2J\033[H"
+    fi
+}
+
+# 暂停等待用户按回车
+pause_and_continue() {
+    echo ""
+    read -rp "按回车键继续..." -n 1
+    echo ""
+}
+
+# 带颜色的输出函数（改进版）
+color_echo() {
+    local color_code="$1"
+    local message="$2"
+    
+    if [ "$COLOR_SUPPORT" = "1" ]; then
+        echo -e "\033[${color_code}m${message}\033[0m"
+    else
+        echo "$message"
+    fi
+}
+
+# 显示分隔线
+show_separator() {
+    echo "=========================================="
+}
 
 # ========================================
 # 主菜单函数
@@ -15,13 +52,15 @@ GITHUB_REPO_URL="https://github.com/Lord2333/seeder_improved"
 # 主菜单
 main_menu() {
     while true; do
-        echo "====== PT做种工具菜单 v$SCRIPT_VERSION ======"
+        clear_screen
+        echo "====== Seeder Improved v$SCRIPT_VERSION ======"
         echo "1. 基础设置"
         echo "2. 生成种子文件"
         echo "3. 快捷功能"
         echo "4. 检查更新"
         echo "5. 显示版本信息"
         echo "0. 退出"
+        show_separator
         read -rp "请选择功能: " choice
         case $choice in
             1) settings_menu ;;
@@ -29,8 +68,14 @@ main_menu() {
             3) quick_functions ;;
             4) check_update ;;
             5) show_version_info ;;
-            0) exit 0 ;;
-            *) echo "无效选择" ;;
+            0) 
+                echo "感谢使用 Seeder Improved！"
+                exit 0 
+                ;;
+            *) 
+                echo "无效选择，请重新输入"
+                pause_and_continue
+                ;;
         esac
     done
 }
@@ -38,19 +83,23 @@ main_menu() {
 # 快捷功能菜单
 quick_functions() {
     while true; do
-        echo ""
+        clear_screen
         echo "====== 快捷功能菜单 ======"
         echo "1. 生成视频缩略图"
         echo "2. 上传文件"
         echo "3. 获取体积最大视频的mediainfo"
         echo "0. 返回主菜单"
+        show_separator
         read -rp "请选择快捷功能: " quick_choice
         case $quick_choice in
             1) generate_thumbnails ;;
             2) upload_files ;;
             3) get_largest_mediainfo ;;
             0) break ;;
-            *) echo "无效选择" ;;
+            *) 
+                echo "无效选择，请重新输入"
+                pause_and_continue
+                ;;
         esac
     done
 }
@@ -58,13 +107,14 @@ quick_functions() {
 # 设置子菜单
 settings_menu() {
     while true; do
-        echo ""
+        clear_screen
         echo "====== 设置菜单 ======"
         echo "1. 选择待做种文件目录/种子存放目录"
         echo "2. 设置种子相关信息"
         echo "3. 设置进度显示选项"
         echo "4. 显示当前设置"
         echo "0. 返回主菜单"
+        show_separator
         read -rp "请选择设置选项: " setting_choice
         case $setting_choice in
             1) choose_dir ;;
@@ -72,7 +122,10 @@ settings_menu() {
             3) set_progress_option ;;
             4) show_current_settings ;;
             0) break ;;
-            *) echo "无效选择" ;;
+            *) 
+                echo "无效选择，请重新输入"
+                pause_and_continue
+                ;;
         esac
     done
 }
@@ -98,48 +151,82 @@ MKTORRENT_INSTALLED=0
 
 # 选择目录
 choose_dir() {
+    clear_screen
+    echo "====== 设置目录 ======"
+    echo "当前源目录: $SRC_DIR"
+    echo "当前种子目录: $TORRENT_DIR"
+    show_separator
+    
     read -rp "请输入待做种文件目录（默认$SRC_DIR）: " input
     [ -n "$input" ] && SRC_DIR="$input"
+    
     read -rp "请输入种子文件存放目录（默认$TORRENT_DIR）: " input
     [ -n "$input" ] && TORRENT_DIR="$input"
+    
+    echo ""
+    color_echo "32" "✓ 目录设置已更新"
+    echo "源目录: $SRC_DIR"
+    echo "种子目录: $TORRENT_DIR"
+    show_separator
+    pause_and_continue
 }
 
 # 设置种子参数
 set_torrent_info() {
+    clear_screen
+    echo "====== 设置种子参数 ======"
+    echo "当前Tracker: $([ -n "$TRACKER_URL" ] && echo "$TRACKER_URL" || echo "未设置")"
+    echo "当前分片大小: $([ -n "$PIECE_SIZE" ] && echo "$PIECE_SIZE" || echo "自动")"
+    echo "当前种子类型: $([ "$IS_PRIVATE" = "1" ] && echo "私人种子" || echo "公开种子")"
+    show_separator
+    
     read -rp "请输入Tracker地址: " TRACKER_URL
     read -rp "请输入分片大小（如 18 代表256KB，20 代表1MB，留空自动）: " PIECE_SIZE
     read -rp "是否为私人种子？(y/n，默认y): " private_choice
     [ -z "$private_choice" ] && private_choice="y"
     if [[ "$private_choice" =~ ^[Yy]$ ]]; then
         IS_PRIVATE="1"
-        echo "设置为私人种子"
+        color_echo "32" "✓ 设置为私人种子"
     else
         IS_PRIVATE="0"
-        echo "设置为公开种子"
+        color_echo "33" "✓ 设置为公开种子"
     fi
     
     # 构建mktorrent参数
     MK_ARG="-a $TRACKER_URL"
     [ -n "$PIECE_SIZE" ] && MK_ARG="$MK_ARG -l $PIECE_SIZE"
     [ "$IS_PRIVATE" = "1" ] && MK_ARG="$MK_ARG -p"
+    
+    echo ""
+    color_echo "32" "✓ 种子参数设置已更新"
+    show_separator
+    pause_and_continue
 }
 
 # 设置进度显示
 set_progress_option() {
+    clear_screen
+    echo "====== 设置进度显示 ======"
     echo "当前进度显示设置: $([ "$SHOW_PROGRESS" = "1" ] && echo "开启" || echo "关闭")"
+    show_separator
+    
     read -rp "是否在生成种子时显示进度？(y/n，默认n): " progress_choice
     [ -z "$progress_choice" ] && progress_choice="n"
     if [[ "$progress_choice" =~ ^[Yy]$ ]]; then
         SHOW_PROGRESS="1"
-        echo "已开启进度显示"
+        color_echo "32" "✓ 已开启进度显示"
     else
         SHOW_PROGRESS="0"
-        echo "已关闭进度显示"
+        color_echo "33" "✓ 已关闭进度显示"
     fi
+    
+    show_separator
+    pause_and_continue
 }
 
 # 显示当前设置
 show_current_settings() {
+    clear_screen
     echo "====== 当前设置 ======"
     echo "源目录: $SRC_DIR"
     echo "种子目录: $TORRENT_DIR"
@@ -147,7 +234,8 @@ show_current_settings() {
     echo "分片大小: $([ -n "$PIECE_SIZE" ] && echo "$PIECE_SIZE" || echo "自动")"
     echo "私人种子: $([ "$IS_PRIVATE" = "1" ] && echo "是" || echo "否")"
     echo "进度显示: $([ "$SHOW_PROGRESS" = "1" ] && echo "开启" || echo "关闭")"
-    echo "======================"
+    show_separator
+    pause_and_continue
 }
 
 # ========================================
@@ -156,33 +244,49 @@ show_current_settings() {
 
 # 获取最大视频的mediainfo
 get_largest_mediainfo() {
+    clear_screen
+    echo "====== 获取最大视频信息 ======"
+    
     largest=$(ls -S "$SRC_DIR"/*.mp4 2>/dev/null | head -n 1)
     if [ -n "$largest" ]; then
         echo "体积最大的视频文件: $largest"
+        show_separator
         mediainfo "$largest"
+        show_separator
+        pause_and_continue
     else
-        echo "未找到视频文件"
+        color_echo "31" "未找到视频文件"
+        echo "请检查目录: $SRC_DIR"
+        show_separator
+        pause_and_continue
     fi
 }
 
 # 上传功能
 upload_files() {
+    clear_screen
     echo "====== 上传功能 ======"
     echo "1. 上传thumbs文件夹（自动压缩）"
     echo "2. 上传种子文件"
     echo "0. 返回主菜单"
+    show_separator
     read -rp "请选择上传选项: " upload_choice
     
     case $upload_choice in
         1) upload_thumbs ;;
         2) upload_torrent ;;
         0) return ;;
-        *) echo "无效选择" ;;
+        *) 
+            echo "无效选择，请重新输入"
+            pause_and_continue
+            ;;
     esac
 }
 
 # 生成缩略图并合并
 generate_thumbnails() {
+    clear_screen
+    echo "====== 生成视频缩略图 ======"
     echo "为 $SRC_DIR 下所有视频生成缩略图..."
     
     # 创建thumbs文件夹
@@ -206,18 +310,22 @@ generate_thumbnails() {
     done
     
     if [ $total_videos -eq 0 ]; then
-        echo "未找到支持的视频文件"
+        color_echo "31" "未找到支持的视频文件"
+        echo "请检查目录: $SRC_DIR"
+        show_separator
+        pause_and_continue
         return
     fi
     
     echo "找到 $total_videos 个视频文件"
-    echo "=========================================="
+    show_separator
     
     # 询问用户选择模式
     echo "请选择缩略图生成模式："
     echo "1. 生成合并缩略图（所有视频合并为一张）"
     echo "2. 生成详细缩略图（每个视频单独生成16帧缩略图）"
     echo "3. 两种模式都生成"
+    show_separator
     read -rp "请选择 (1/2/3): " mode_choice
     
     case $mode_choice in
@@ -254,18 +362,6 @@ check_color_support() {
     fi
 }
 
-# 带颜色的输出函数
-color_echo() {
-    local color_code="$1"
-    local message="$2"
-    
-    if [ "$COLOR_SUPPORT" = "1" ]; then
-        echo -e "\033[${color_code}m${message}\033[0m"
-    else
-        echo "$message"
-    fi
-}
-
 # 检查系统类型
 detect_os() {
     if [ -f /etc/os-release ]; then
@@ -274,14 +370,16 @@ detect_os() {
     else
         OS=$(uname -s)
     fi
-    echo "检测到系统: $OS"
+    echo "系统检测: $OS"
 }
 
 # 检查并安装依赖
 check_and_install() {
+    echo "正在检查系统依赖..."
+    
     for pkg in ffmpeg mediainfo mktorrent imagemagick; do
         if ! command -v $pkg &>/dev/null; then
-            echo "$pkg 未安装，正在安装..."
+            color_echo "33" "⚠️ $pkg 未安装，正在安装..."
             case "$OS" in
                 ubuntu|debian)
                     sudo apt update && sudo apt install -y $pkg
@@ -294,13 +392,13 @@ check_and_install() {
                     ;;
             esac
         else
-            echo "$pkg 已安装"
+            color_echo "32" "✓ $pkg 已安装"
         fi
     done
     
     # 检查7z（用于压缩）
     if ! command -v 7z &>/dev/null; then
-        echo "7z 未安装，建议安装用于文件压缩"
+        color_echo "33" "⚠️ 7z 未安装，建议安装用于文件压缩"
         case "$OS" in
             ubuntu|debian)
                 echo "安装命令: sudo apt install p7zip-full"
@@ -310,13 +408,13 @@ check_and_install() {
                 ;;
         esac
     else
-        echo "7z 已安装"
+        color_echo "32" "✓ 7z 已安装"
     fi
     
     # 检查网络下载工具
     echo "检查网络下载工具..."
     if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
-        echo "警告: 未找到curl或wget，将无法下载中文字体和上传文件"
+        color_echo "33" "⚠️ 未找到curl或wget，将无法下载中文字体和上传文件"
         case "$OS" in
             ubuntu|debian)
                 echo "建议安装: sudo apt install curl"
@@ -326,9 +424,11 @@ check_and_install() {
                 ;;
         esac
     else
-        echo "✓ 网络下载工具已就绪"
-        command -v clear &>/dev/null
+        color_echo "32" "✓ 网络下载工具已就绪"
     fi
+    
+    echo ""
+    color_echo "32" "✓ 系统依赖检查完成"
 }
 
 # ========================================
@@ -337,19 +437,27 @@ check_and_install() {
 
 # 生成种子文件
 generate_torrent() {
+    clear_screen
+    echo "====== 生成种子文件 ======"
+    
     if [ -z "$TRACKER_URL" ]; then
-        echo "错误: 请先设置Tracker地址"
+        color_echo "31" "错误: 请先设置Tracker地址"
+        echo "请在基础设置中配置Tracker地址"
+        show_separator
+        pause_and_continue
         return 1
     fi
     
     if [ ! -d "$SRC_DIR" ]; then
-        echo "错误: 源目录不存在: $SRC_DIR"
+        color_echo "31" "错误: 源目录不存在: $SRC_DIR"
+        show_separator
+        pause_and_continue
         return 1
     fi
     
     # 检查mktorrent是否安装
     if ! command -v mktorrent &>/dev/null; then
-        echo "错误: mktorrent未安装，请先安装"
+        color_echo "31" "错误: mktorrent未安装，请先安装"
         case "$OS" in
             ubuntu|debian)
                 echo "安装命令: sudo apt install mktorrent"
@@ -358,6 +466,8 @@ generate_torrent() {
                 echo "安装命令: sudo yum install mktorrent"
                 ;;
         esac
+        show_separator
+        pause_and_continue
         return 1
     fi
     
@@ -374,7 +484,7 @@ generate_torrent() {
     echo "Tracker: $TRACKER_URL"
     echo "私人种子: $([ "$IS_PRIVATE" = "1" ] && echo "是" || echo "否")"
     echo "分片大小: $([ -n "$PIECE_SIZE" ] && echo "${PIECE_SIZE}" || echo "自动")"
-    echo "=========================================="
+    show_separator
     
     # 生成种子文件
     if [ "$SHOW_PROGRESS" = "1" ]; then
@@ -388,7 +498,7 @@ generate_torrent() {
     fi
     
     if [ -f "$torrent_file" ]; then
-        echo "✓ 种子文件生成成功: $torrent_file"
+        color_echo "32" "✓ 种子文件生成成功: $torrent_file"
         
         # 显示种子文件信息
         local torrent_size=$(stat -c%s "$torrent_file" 2>/dev/null)
@@ -396,17 +506,24 @@ generate_torrent() {
             torrent_size=$(stat -f%z "$torrent_file" 2>/dev/null)
         fi
         
-        echo "种子文件大小: ${torrent_size} 字节"
-        
-        # 使用transmission-show显示详细信息（如果可用）
-        if command -v transmission-show &>/dev/null; then
-            echo "种子文件详细信息:"
-            transmission-show "$torrent_file" | head -20
+        # 格式化种子文件大小显示
+        local torrent_size_str=""
+        if [ $torrent_size -gt 1048576 ]; then
+            local mb_size=$(awk "BEGIN {printf \"%.1f\", $torrent_size / 1048576}")
+            torrent_size_str="${mb_size}MB"
+        else
+            local kb_size=$(awk "BEGIN {printf \"%.1f\", $torrent_size / 1024}")
+            torrent_size_str="${kb_size}KB"
         fi
         
+        echo "种子文件大小: $torrent_size_str"
+        show_separator
+        pause_and_continue
         return 0
     else
-        echo "✗ 种子文件生成失败"
+        color_echo "31" "✗ 种子文件生成失败"
+        show_separator
+        pause_and_continue
         return 1
     fi
 }
@@ -549,7 +666,7 @@ generate_single_video_thumbnail() {
     local end=$((duration_int - 5))
     
     if (( end <= start || duration_int < tile_total )); then
-        echo "⚠️ 跳过：$filename，视频太短（${duration_int}秒）"
+        color_echo "33" "⚠️ 跳过：$filename，视频太短（${duration_int}秒）"
         rm -rf "$temp_dir"
         return
     fi
@@ -580,6 +697,7 @@ generate_single_video_thumbnail() {
             
             # 检查字体文件是否存在，如果不存在则下载
             if [ ! -f "$font_path" ]; then
+                echo "正在下载中文字体..."
                 if command -v curl &>/dev/null; then
                     curl -L -o "$font_path" "$font_url" 2>/dev/null
                 elif command -v wget &>/dev/null; then
@@ -603,79 +721,19 @@ generate_single_video_thumbnail() {
             fi
             
             if [ -f "$output_path" ]; then
-                echo "✓ 已生成详细缩略图: $output_path"
+                color_echo "32" "✓ 已生成详细缩略图: $output_path"
             else
-                echo "✗ 生成详细缩略图失败"
+                color_echo "31" "✗ 生成详细缩略图失败"
             fi
         else
-            echo "✗ 网格生成失败"
+            color_echo "31" "✗ 网格生成失败"
         fi
     else
-        echo "✗ ffmpeg未安装，无法生成详细缩略图"
+        color_echo "31" "✗ ffmpeg未安装，无法生成详细缩略图"
     fi
     
     # 清理临时文件
     rm -rf "$temp_dir"
-}
-
-# 生成缩略图并合并
-generate_thumbnails() {
-    echo "为 $SRC_DIR 下所有视频生成缩略图..."
-    
-    # 创建thumbs文件夹
-    THUMBS_DIR="$SRC_DIR/thumbs"
-    mkdir -p "$THUMBS_DIR"
-    
-    # 支持的视频格式
-    VIDEO_EXTENSIONS=("mp4" "avi" "mkv" "mov" "wmv" "flv" "webm" "m4v" "3gp" "ts")
-    
-    # 首先统计总视频数量
-    echo "正在扫描视频文件..."
-    total_videos=0
-    video_files=()
-    
-    for ext in "${VIDEO_EXTENSIONS[@]}"; do
-        for f in "$SRC_DIR"/*."$ext"; do
-            [ -e "$f" ] || continue
-            total_videos=$((total_videos + 1))
-            video_files+=("$f")
-        done
-    done
-    
-    if [ $total_videos -eq 0 ]; then
-        echo "未找到支持的视频文件"
-        return
-    fi
-    
-    echo "找到 $total_videos 个视频文件"
-    echo "=========================================="
-    
-    # 询问用户选择模式
-    echo "请选择缩略图生成模式："
-    echo "1. 生成合并缩略图（所有视频合并为一张）"
-    echo "2. 生成详细缩略图（每个视频单独生成16帧缩略图）"
-    echo "3. 两种模式都生成"
-    read -rp "请选择 (1/2/3): " mode_choice
-    
-    case $mode_choice in
-        1)
-            echo "选择模式1：生成合并缩略图"
-            generate_combined_thumbnails
-            ;;
-        2)
-            echo "选择模式2：生成详细缩略图"
-            generate_detailed_thumbnails
-            ;;
-        3)
-            echo "选择模式3：两种模式都生成"
-            generate_combined_thumbnails
-            generate_detailed_thumbnails
-            ;;
-        *)
-            echo "无效选择，默认生成合并缩略图"
-            generate_combined_thumbnails
-            ;;
-    esac
 }
 
 # 生成合并缩略图
@@ -717,7 +775,7 @@ generate_combined_thumbnails() {
         
         if [ -z "$duration_int" ] || [ "$duration_int" -lt 10 ]; then
             printf " ⚠️\n"
-            echo "警告: $filename 视频太短，跳过"
+            color_echo "33" "警告: $filename 视频太短，跳过"
             continue
         fi
         
@@ -730,12 +788,12 @@ generate_combined_thumbnails() {
             printf " ✓\n"
         else
             printf " ✗\n"
-            echo "警告: 无法为 $filename 生成缩略图"
+            color_echo "33" "警告: 无法为 $filename 生成缩略图"
         fi
     done
     
-    echo "=========================================="
-    echo "缩略图生成完成！正在合并..."
+    show_separator
+    color_echo "32" "✓ 缩略图生成完成！正在合并..."
     
     # 计算网格布局
     if [ $total_videos -le 4 ]; then
@@ -765,9 +823,7 @@ generate_combined_thumbnails() {
     
     # 计算总体积大小
     local total_size_bytes=0
-    echo "=== 调试：开始计算总体积 ==="
     for f in "${video_files[@]}"; do
-        echo "处理文件: $f"
         local file_size=$(stat -c%s "$f" 2>/dev/null)
         if [ -z "$file_size" ]; then
             file_size=$(stat -f%z "$f" 2>/dev/null)
@@ -775,39 +831,20 @@ generate_combined_thumbnails() {
         if [ -z "$file_size" ]; then
             file_size=$(ls -l "$f" | awk '{print $5}' 2>/dev/null)
         fi
-        echo "文件大小（字节）: $file_size"
         if [ -n "$file_size" ] && [ "$file_size" -gt 0 ] 2>/dev/null; then
             total_size_bytes=$((total_size_bytes + file_size))
-            echo "累计总大小: $total_size_bytes"
-        else
-            echo "警告: 无法获取文件大小"
         fi
     done
-    echo "最终总大小（字节）: $total_size_bytes"
-    echo "=== 调试：总体积计算完成 ==="
     
     # 格式化总体积
     local total_size_str=""
-    echo "=== 调试：开始格式化总体积 ==="
-    echo "总字节数: $total_size_bytes"
-    
     if [ $total_size_bytes -gt 1073741824 ]; then
-        echo "大于1GB，转换为GB"
-        # 使用awk进行浮点运算，避免bc可能的问题
         local gb_size=$(awk "BEGIN {printf \"%.1f\", $total_size_bytes / 1073741824}")
         total_size_str="${gb_size}GB"
-        echo "GB大小: $gb_size"
     else
-        echo "小于1GB，转换为MB"
-        # 使用awk进行浮点运算
         local mb_size=$(awk "BEGIN {printf \"%.1f\", $total_size_bytes / 1048576}")
         total_size_str="${mb_size}MB"
-        echo "MB大小: $mb_size"
     fi
-    
-    echo "格式化后的总体积: $total_size_str"
-    echo "总视频文件数: $total_videos"
-    echo "=== 调试：总体积格式化完成 ==="
     
     # 创建合并的缩略图
     montage_path="$THUMBS_DIR/combined_thumbnails.jpg"
@@ -824,31 +861,17 @@ generate_combined_thumbnails() {
             local font_path="$THUMBS_DIR/LXGWWenKai-Regular.ttf"
             local font_url="https://github.com/lxgw/LxgwWenKai/releases/download/v1.520/LXGWWenKai-Regular.ttf"
             
-            echo "=== 调试：字体文件检查 ==="
-            echo "字体路径: $font_path"
-            
             # 检查字体文件是否存在，如果不存在则下载
             if [ ! -f "$font_path" ]; then
-                echo "字体文件不存在，开始下载..."
+                echo "正在下载中文字体..."
                 if command -v curl &>/dev/null; then
-                    echo "使用curl下载字体"
                     curl -L -o "$font_path" "$font_url" 2>/dev/null
                 elif command -v wget &>/dev/null; then
-                    echo "使用wget下载字体"
                     wget -O "$font_path" "$font_url" 2>/dev/null
                 else
-                    echo "未找到curl或wget，无法下载字体"
                     font_path=""
                 fi
             fi
-            
-            if [ -f "$font_path" ]; then
-                local font_size=$(stat -c%s "$font_path" 2>/dev/null)
-                echo "字体文件存在，大小: $font_size 字节"
-            else
-                echo "字体文件不存在或下载失败"
-            fi
-            echo "=== 调试：字体文件检查完成 ==="
             
             # 创建带信息区域的最终图片
             local final_path="$THUMBS_DIR/combined_thumbnails_with_info.jpg"
@@ -858,10 +881,6 @@ generate_combined_thumbnails() {
             local width=$(echo "$image_info" | awk '{print $3}' | cut -dx -f1)
             local height=$(echo "$image_info" | awk '{print $3}' | cut -dx -f2)
             
-            echo "=== 调试：图片处理信息 ==="
-            echo "原图尺寸: ${width}x${height}"
-            echo "图片信息: $image_info"
-            
             if [ -n "$width" ] && [ -n "$height" ]; then
                 # 计算信息区域高度（根据文字长度和字体大小自动计算）
                 local text="视频文件总数: $total_videos | 总体积: $total_size_str | 目录: $(basename "$SRC_DIR")"
@@ -869,37 +888,20 @@ generate_combined_thumbnails() {
                 local text_width=$(echo "$text" | wc -c)
                 local estimated_width=$((text_width * font_size / 2))  # 估算文字宽度
                 
-                echo "文字内容: $text"
-                echo "文字长度: $text_width"
-                echo "估算宽度: $estimated_width"
-                echo "图片宽度: $width"
-                
                 # 确保信息区域有足够高度，至少40px
                 local info_height=40
                 if [ $estimated_width -gt $width ]; then
                     # 如果文字太长，增加信息区域高度
                     info_height=$((estimated_width * 40 / $width + 40))
-                    echo "文字太长，调整信息区域高度为: $info_height"
-                else
-                    echo "使用默认信息区域高度: $info_height"
                 fi
                 
                 local new_height=$((height + info_height))
-                echo "新图片高度: $new_height"
-                echo "=== 调试：图片处理信息完成 ==="
                 
                 # 创建带信息区域的图片（留白在顶部）
-                echo "=== 调试：开始添加文字信息 ==="
-                echo "字体路径: $font_path"
-                echo "文字内容: $text"
-                echo "新图片尺寸: ${width}x${new_height}"
-                
-                # 正确的方法：先创建带留白的图片，再添加文字
-                echo "创建带顶部留白的图片并添加文字..."
+                echo "正在添加文字信息..."
                 
                 # 方法1: 使用下载的字体
                 if [ -f "$font_path" ] && [ -s "$font_path" ]; then
-                    echo "方法1: 使用下载的中文字体"
                     # 先创建带白色背景的新图片
                     convert -size "${width}x${new_height}" xc:white \
                             -fill black -pointsize $font_size \
@@ -911,7 +913,6 @@ generate_combined_thumbnails() {
                 
                 # 如果方法1失败，尝试方法2
                 if [ ! -f "$final_path" ] || [ ! -s "$final_path" ]; then
-                    echo "方法2: 使用系统字体"
                     convert -size "${width}x${new_height}" xc:white \
                             -fill black -pointsize $font_size \
                             -draw "text 10,25 '$text'" \
@@ -919,23 +920,14 @@ generate_combined_thumbnails() {
                             "$final_path" 2>/dev/null
                 fi
                 
-                echo "=== 调试：文字添加完成 ==="
-                
                 if [ -f "$final_path" ]; then
-                    echo "✓ 已生成带信息区域的合并缩略图: $final_path"
-                    # 检查文件大小
-                    local final_size=$(stat -c%s "$final_path" 2>/dev/null)
-                    echo "最终文件大小: $final_size 字节"
-                    
+                    color_echo "32" "✓ 已生成带信息区域的合并缩略图"
                     # 替换原文件
                     mv "$final_path" "$montage_path"
-                    echo "✓ 文件已替换"
                 else
-                    echo "⚠️ 无法添加信息区域，保留原合并缩略图"
-                    echo "检查convert命令是否成功执行"
+                    color_echo "33" "⚠️ 无法添加信息区域，保留原合并缩略图"
                     
                     # 尝试简单的文字添加方法
-                    echo "尝试备用方法添加文字到图片上方..."
                     convert -size "${width}x${new_height}" xc:white \
                             -fill black -pointsize $font_size \
                             -draw "text 20,20 '视频文件总数: $total_videos'" \
@@ -945,25 +937,23 @@ generate_combined_thumbnails() {
                             "$final_path" 2>/dev/null
                     
                     if [ -f "$final_path" ]; then
-                        echo "✓ 备用方法成功，已生成带信息区域的合并缩略图"
+                        color_echo "32" "✓ 备用方法成功，已生成带信息区域的合并缩略图"
                         mv "$final_path" "$montage_path"
-                    else
-                        echo "✗ 备用方法也失败，保留原合并缩略图"
                     fi
                 fi
             else
-                echo "⚠️ 无法获取图片尺寸，保留原合并缩略图"
+                color_echo "33" "⚠️ 无法获取图片尺寸，保留原合并缩略图"
             fi
             
             # 删除单个缩略图文件，只保留合并后的缩略图
-            echo "正在清理单个缩略图文件..."
+            echo "正在清理临时文件..."
             rm -f "$THUMBS_DIR"/*_thumb.jpg
-            echo "✓ 已删除单个缩略图文件，仅保留合并缩略图"
+            color_echo "32" "✓ 已删除单个缩略图文件，仅保留合并缩略图"
         else
-            echo "✗ 合并缩略图失败"
+            color_echo "31" "✗ 合并缩略图失败"
         fi
     else
-        echo "✗ ImageMagick未安装，无法合并缩略图。请安装ImageMagick后重试。"
+        color_echo "31" "✗ ImageMagick未安装，无法合并缩略图"
         echo "Ubuntu/Debian: sudo apt install imagemagick"
         echo "CentOS/RHEL: sudo yum install ImageMagick"
     fi
@@ -971,20 +961,21 @@ generate_combined_thumbnails() {
     # 清理下载的字体文件
     local font_path="$THUMBS_DIR/LXGWWenKai-Regular.ttf"
     if [ -f "$font_path" ]; then
-        echo "正在清理下载的字体文件..."
         rm -f "$font_path"
-        echo "✓ 已删除字体文件: $(basename "$font_path")"
     fi
     
-    echo "=========================================="
-    echo "合并缩略图生成完毕，共处理 $total_videos 个视频文件。"
+    show_separator
+    color_echo "32" "✓ 合并缩略图生成完毕"
+    echo "共处理 $total_videos 个视频文件"
     echo "最终文件: $montage_path"
+    show_separator
+    pause_and_continue
 }
 
 # 生成详细缩略图
 generate_detailed_thumbnails() {
     echo "开始生成详细缩略图..."
-    echo "=========================================="
+    show_separator
     
     # 当前处理进度
     current=0
@@ -1009,7 +1000,7 @@ generate_detailed_thumbnails() {
         done
         
         # 显示进度信息
-        printf "\r\b[%s] %d/%d (%d%%) 正在生成详细缩略图..." "$bar" "$current" "$total_videos" "$progress_percent"
+        printf "\r[%s] %d/%d (%d%%) 正在生成详细缩略图..." "$bar" "$current" "$total_videos" "$progress_percent"
         
         # 生成详细缩略图
         generate_single_video_thumbnail "$f" "$THUMBS_DIR"
@@ -1020,93 +1011,28 @@ generate_detailed_thumbnails() {
     # 清理下载的字体文件
     local font_path="$THUMBS_DIR/LXGWWenKai-Regular.ttf"
     if [ -f "$font_path" ]; then
-        echo "正在清理下载的字体文件..."
         rm -f "$font_path"
-        echo "✓ 已删除字体文件: $(basename "$font_path")"
     fi
     
-    echo "=========================================="
-    echo "详细缩略图生成完毕，共处理 $total_videos 个视频文件。"
+    show_separator
+    color_echo "32" "✓ 详细缩略图生成完毕"
+    echo "共处理 $total_videos 个视频文件"
     echo "详细缩略图文件夹: $THUMBS_DIR"
-}
-
-# 生成种子文件
-generate_torrent() {
-    if [ -z "$TRACKER_URL" ]; then
-        echo "错误: 请先设置Tracker地址"
-        return 1
-    fi
-    
-    if [ ! -d "$SRC_DIR" ]; then
-        echo "错误: 源目录不存在: $SRC_DIR"
-        return 1
-    fi
-    
-    # 创建种子文件存放目录
-    mkdir -p "$TORRENT_DIR"
-    
-    # 获取目录名作为种子文件名
-    local dir_name=$(basename "$SRC_DIR")
-    local torrent_file="$TORRENT_DIR/${dir_name}.torrent"
-    
-    echo "开始生成种子文件..."
-    echo "源目录: $SRC_DIR"
-    echo "种子文件: $torrent_file"
-    echo "Tracker: $TRACKER_URL"
-    echo "私人种子: $([ "$IS_PRIVATE" = "1" ] && echo "是" || echo "否")"
-    echo "分片大小: $([ -n "$PIECE_SIZE" ] && echo "${PIECE_SIZE}" || echo "自动")"
-    echo "=========================================="
-    
-    # 生成种子文件
-    if [ "$SHOW_PROGRESS" = "1" ]; then
-        echo "使用进度显示模式生成种子文件..."
-        mktorrent $MK_ARG -o "$torrent_file" "$SRC_DIR" 2>&1 | while IFS= read -r line; do
-            echo "$line"
-        done
-    else
-        echo "正在生成种子文件，请稍候..."
-        mktorrent $MK_ARG -o "$torrent_file" "$SRC_DIR" >/dev/null 2>&1
-    fi
-    
-    if [ -f "$torrent_file" ]; then
-        echo "✓ 种子文件生成成功: $torrent_file"
-        
-        # 显示种子文件信息
-        local torrent_size=$(stat -c%s "$torrent_file" 2>/dev/null)
-        if [ -z "$torrent_size" ]; then
-            torrent_size=$(stat -f%z "$torrent_file" 2>/dev/null)
-        fi
-        
-        echo "种子文件大小: ${torrent_size} 字节"
-        
-        # 使用transmission-show显示详细信息（如果可用）
-        if command -v transmission-show &>/dev/null; then
-            echo "种子文件详细信息:"
-            transmission-show "$torrent_file" | head -20
-        fi
-        
-        return 0
-    else
-        echo "✗ 种子文件生成失败"
-        return 1
-    fi
+    show_separator
+    pause_and_continue
 }
 
 
 
-# 获取最大视频的mediainfo
-get_largest_mediainfo() {
-    largest=$(ls -S "$SRC_DIR"/*.mp4 2>/dev/null | head -n 1)
-    if [ -n "$largest" ]; then
-        echo "体积最大的视频文件: $largest"
-        mediainfo "$largest"
-    else
-        echo "未找到视频文件"
-    fi
-}
+
+
+
 
 # 上传thumbs文件夹
 upload_thumbs() {
+    clear_screen
+    echo "====== 上传缩略图文件夹 ======"
+    
     local thumbs_dir=""
     
     # 方式1: 检查脚本中的缩略图目录变量
@@ -1120,18 +1046,20 @@ upload_thumbs() {
             thumbs_dir="$possible_thumbs_dir"
             echo "找到缩略图目录: $thumbs_dir"
         else
-            echo "错误: 无法找到缩略图目录"
+            color_echo "31" "错误: 无法找到缩略图目录"
             echo "请检查以下位置:"
             echo "  1. 脚本变量THUMBS_DIR: $THUMBS_DIR"
             echo "  2. 做种资源目录下的thumbs文件夹: $possible_thumbs_dir"
             echo "请先生成缩略图后再尝试上传"
+            show_separator
+            pause_and_continue
             return 1
         fi
     fi
     
     # 检查curl是否安装
     if ! command -v curl &>/dev/null; then
-        echo "错误: curl未安装，无法上传文件"
+        color_echo "31" "错误: curl未安装，无法上传文件"
         return 1
     fi
     
@@ -1152,19 +1080,38 @@ upload_thumbs() {
         fi
     done < <(find "$thumbs_dir" -type f -print0 2>/dev/null)
     
+    # 格式化文件夹大小显示
+    local folder_size_str=""
+    if [ $folder_size -gt 1073741824 ]; then
+        local gb_size=$(awk "BEGIN {printf \"%.1f\", $folder_size / 1073741824}")
+        folder_size_str="${gb_size}GB"
+    else
+        local mb_size=$(awk "BEGIN {printf \"%.1f\", $folder_size / 1048576}")
+        folder_size_str="${mb_size}MB"
+    fi
+    
     echo "thumbs文件夹统计:"
     echo "  文件数量: $file_count"
-    echo "  总大小: ${folder_size} 字节"
+    echo "  总大小: $folder_size_str"
     
     # 估算压缩后大小（假设压缩比为1:3）
     local estimated_compressed_size=$((folder_size / 3))
     local max_size=26214400  # 25MB
     
-    echo "  估算压缩后大小: ${estimated_compressed_size} 字节"
+    local estimated_size_str=""
+    if [ $estimated_compressed_size -gt 1048576 ]; then
+        local mb_size=$(awk "BEGIN {printf \"%.1f\", $estimated_compressed_size / 1048576}")
+        estimated_size_str="${mb_size}MB"
+    else
+        local kb_size=$(awk "BEGIN {printf \"%.1f\", $estimated_compressed_size / 1024}")
+        estimated_size_str="${kb_size}KB"
+    fi
+    
+    echo "  估算压缩后大小: $estimated_size_str"
     
     # 决定压缩策略
     if [ $estimated_compressed_size -gt $max_size ]; then
-        echo "估算压缩后文件将超过25MB，直接使用分卷压缩..."
+        color_echo "33" "⚠️ 估算压缩后文件将超过25MB，使用分卷压缩..."
         
         # 直接进行分卷压缩
         local volume_size=25000000  # 25MB
@@ -1177,11 +1124,11 @@ upload_thumbs() {
         local volume_files=($(ls "$thumbs_dir"/thumbs.7z.* 2>/dev/null))
         
         if [ ${#volume_files[@]} -eq 0 ]; then
-            echo "✗ 分卷压缩失败"
+            color_echo "31" "✗ 分卷压缩失败"
             return 1
         fi
         
-        echo "✓ 分卷压缩完成，共 ${#volume_files[@]} 个文件"
+        color_echo "32" "✓ 分卷压缩完成，共 ${#volume_files[@]} 个文件"
         
         # 显示每个分卷的大小
         for file in "${volume_files[@]}"; do
@@ -1189,7 +1136,18 @@ upload_thumbs() {
             if [ -z "$vol_size" ]; then
                 vol_size=$(stat -f%z "$file" 2>/dev/null)
             fi
-            echo "  $(basename "$file"): ${vol_size} 字节"
+            
+            # 格式化分卷大小显示
+            local vol_size_str=""
+            if [ $vol_size -gt 1048576 ]; then
+                local mb_size=$(awk "BEGIN {printf \"%.1f\", $vol_size / 1048576}")
+                vol_size_str="${mb_size}MB"
+            else
+                local kb_size=$(awk "BEGIN {printf \"%.1f\", $vol_size / 1024}")
+                vol_size_str="${kb_size}KB"
+            fi
+            
+            echo "  $(basename "$file"): $vol_size_str"
         done
         
         # 上传每个分卷
@@ -1199,11 +1157,11 @@ upload_thumbs() {
         done
         
         # 清理分卷文件
-        echo "清理临时文件..."
+        echo "正在清理临时文件..."
         rm -f "$thumbs_dir"/thumbs.7z.*
         
     else
-        echo "估算压缩后文件小于25MB，使用普通压缩..."
+        color_echo "32" "✓ 估算压缩后文件小于25MB，使用普通压缩..."
         
         # 创建临时压缩文件
         local temp_archive="$thumbs_dir/thumbs_temp.7z"
@@ -1214,7 +1172,7 @@ upload_thumbs() {
         7z a -t7z -m0=lzma2 -mx=9 "$temp_archive" "$thumbs_dir"/* >/dev/null 2>&1
         
         if [ ! -f "$temp_archive" ]; then
-            echo "✗ 压缩失败"
+            color_echo "31" "✗ 压缩失败"
             return 1
         fi
         
@@ -1224,11 +1182,21 @@ upload_thumbs() {
             actual_compressed_size=$(stat -f%z "$temp_archive" 2>/dev/null)
         fi
         
-        echo "实际压缩文件大小: ${actual_compressed_size} 字节"
+        # 格式化实际压缩文件大小显示
+        local actual_size_str=""
+        if [ $actual_compressed_size -gt 1048576 ]; then
+            local mb_size=$(awk "BEGIN {printf \"%.1f\", $actual_compressed_size / 1048576}")
+            actual_size_str="${mb_size}MB"
+        else
+            local kb_size=$(awk "BEGIN {printf \"%.1f\", $actual_compressed_size / 1024}")
+            actual_size_str="${kb_size}KB"
+        fi
+        
+        echo "实际压缩文件大小: $actual_size_str"
         
         # 检查实际大小是否超过限制
         if [ $actual_compressed_size -gt $max_size ]; then
-            echo "实际压缩后文件超过25MB，重新进行分卷压缩..."
+            color_echo "33" "⚠️ 实际压缩后文件超过25MB，重新进行分卷压缩..."
             
             # 删除临时压缩文件
             rm -f "$temp_archive"
@@ -1242,11 +1210,11 @@ upload_thumbs() {
             local volume_files=($(ls "$thumbs_dir"/thumbs.7z.* 2>/dev/null))
             
             if [ ${#volume_files[@]} -eq 0 ]; then
-                echo "✗ 分卷压缩失败"
+                color_echo "31" "✗ 分卷压缩失败"
                 return 1
             fi
             
-            echo "✓ 分卷压缩完成，共 ${#volume_files[@]} 个文件"
+            color_echo "32" "✓ 分卷压缩完成，共 ${#volume_files[@]} 个文件"
             
             # 上传每个分卷
             for file in "${volume_files[@]}"; do
@@ -1255,30 +1223,40 @@ upload_thumbs() {
             done
             
             # 清理分卷文件
-            echo "清理临时文件..."
+            echo "正在清理临时文件..."
             rm -f "$thumbs_dir"/thumbs.7z.*
             
         else
-            echo "文件小于25MB，直接上传..."
+            color_echo "32" "✓ 文件小于25MB，直接上传..."
             mv "$temp_archive" "$final_archive"
             upload_single_file "$final_archive"
             
             # 清理临时文件
+            echo "正在清理临时文件..."
             rm -f "$final_archive"
         fi
     fi
     
-    echo "✓ thumbs文件夹上传完成"
+    show_separator
+    color_echo "32" "✓ thumbs文件夹上传完成"
+    show_separator
+    pause_and_continue
 }
 
 # 上传种子文件
 upload_torrent() {
+    clear_screen
+    echo "====== 上传种子文件 ======"
+    
     # 检查是否已生成种子文件
     local dir_name=$(basename "$SRC_DIR")
     local torrent_file="$TORRENT_DIR/${dir_name}.torrent"
     
     if [ ! -f "$torrent_file" ]; then
-        echo "错误: 种子文件不存在，请先生成种子文件"
+        color_echo "31" "错误: 种子文件不存在，请先生成种子文件"
+        echo "种子文件路径: $torrent_file"
+        show_separator
+        pause_and_continue
         return 1
     fi
     
@@ -1291,11 +1269,11 @@ upload_single_file() {
     local file_path="$1"
     local filename=$(basename "$file_path")
     
-    echo "上传文件: $filename"
+    echo "正在上传: $filename"
     
     # 检查文件是否存在
     if [ ! -f "$file_path" ]; then
-        echo "✗ 文件不存在: $file_path"
+        color_echo "31" "✗ 文件不存在: $file_path"
         return 1
     fi
     
@@ -1305,12 +1283,22 @@ upload_single_file() {
         file_size=$(stat -f%z "$file_path" 2>/dev/null)
     fi
     
-    echo "文件大小: ${file_size} 字节"
+    # 格式化文件大小显示
+    local size_str=""
+    if [ $file_size -gt 1073741824 ]; then
+        local gb_size=$(awk "BEGIN {printf \"%.1f\", $file_size / 1073741824}")
+        size_str="${gb_size}GB"
+    else
+        local mb_size=$(awk "BEGIN {printf \"%.1f\", $file_size / 1048576}")
+        size_str="${mb_size}MB"
+    fi
+    
+    echo "文件大小: $size_str"
     
     # 检查是否超过25MB
     local max_size=26214400
     if [ $file_size -gt $max_size ]; then
-        echo "⚠️ 警告: 文件超过25MB，可能上传失败"
+        color_echo "33" "⚠️ 警告: 文件超过25MB，可能上传失败"
         read -rp "是否继续上传？(y/n): " continue_upload
         if [[ ! "$continue_upload" =~ ^[Yy]$ ]]; then
             echo "取消上传"
@@ -1319,10 +1307,8 @@ upload_single_file() {
     fi
     
     # 执行上传
-    echo "正在上传到暂存服务器"
+    echo "正在上传到暂存服务器..."
     local current_timestamp=$(date +%s)
-    local filename=$(basename "$file_path")
-    # 将文件名中的.替换为_以避免服务器报错
     local safe_filename=$(echo "$filename" | sed 's/\./_/g')
     local upload_result=$(curl -s -Fc="@$file_path" -Fn="${current_timestamp}_${safe_filename}" -Fe=600 https://pb.o1o.zip 2>/dev/null)
     
@@ -1349,15 +1335,15 @@ upload_single_file() {
         fi
         
         if [ -n "$url" ]; then
-            color_echo "32" "✓ $filename 上传成功，文件临时地址：$url"
-            color_echo "31" "文件仅保存10分钟！请尽快下载！"
+            color_echo "32" "✓ $filename 上传成功"
+            echo "文件临时地址：$url"
+            color_echo "31" "⚠️ 文件仅保存10分钟！请尽快下载！"
         else
-            echo "✓ 上传成功，但无法解析返回的URL"
+            color_echo "33" "✓ 上传成功，但无法解析返回的URL"
             echo "服务器响应: $upload_result"
-            echo "请手动检查返回的JSON内容"
         fi
     else
-        echo "✗ 上传失败"
+        color_echo "31" "✗ 上传失败"
         echo "curl错误代码: $?"
         if [ -n "$upload_result" ]; then
             echo "服务器响应: $upload_result"
@@ -1372,13 +1358,14 @@ upload_single_file() {
 
 # 检查更新功能
 check_update() {
+    clear_screen
     echo "====== 检查更新 ======"
     echo "当前版本: $SCRIPT_VERSION"
     echo "正在检查更新..."
     
     # 检查网络连接
     if ! command -v curl &>/dev/null && ! command -v wget &>/dev/null; then
-        echo "错误: 未安装curl或wget，无法检查更新"
+        color_echo "31" "错误: 未安装curl或wget，无法检查更新"
         echo "请安装网络工具后重试"
         return 1
     fi
@@ -1400,7 +1387,7 @@ check_update() {
     fi
     
     if [ "$download_success" = false ]; then
-        echo "错误: 无法下载远程脚本文件"
+        color_echo "31" "错误: 无法下载远程脚本文件"
         echo "请检查网络连接或稍后重试"
         rm -f "$temp_file" 2>/dev/null
         return 1
@@ -1408,7 +1395,7 @@ check_update() {
     
     # 检查下载的文件是否有效
     if [ ! -s "$temp_file" ]; then
-        echo "错误: 下载的文件为空"
+        color_echo "31" "错误: 下载的文件为空"
         rm -f "$temp_file" 2>/dev/null
         return 1
     fi
@@ -1420,7 +1407,7 @@ check_update() {
     fi
     
     if [ -z "$remote_version" ]; then
-        echo "错误: 无法从远程脚本中提取版本号"
+        color_echo "31" "错误: 无法从远程脚本中提取版本号"
         echo "请手动访问 $GITHUB_REPO_URL 检查更新"
         rm -f "$temp_file" 2>/dev/null
         return 1
@@ -1433,6 +1420,8 @@ check_update() {
     if [ "$remote_version" = "$SCRIPT_VERSION" ]; then
         color_echo "32" "✓ 当前已是最新版本"
         echo "您的脚本版本 $SCRIPT_VERSION 是最新的"
+        show_separator
+        pause_and_continue
     else
         color_echo "33" "⚠️ 发现新版本可用"
         echo "当前版本: $SCRIPT_VERSION"
@@ -1443,7 +1432,7 @@ check_update() {
         echo "2. 手动下载新版本"
         echo "3. 查看更新日志"
         echo "0. 取消更新"
-        
+        show_separator
         read -rp "请选择操作: " update_choice
         case $update_choice in
             1)
@@ -1455,18 +1444,24 @@ check_update() {
                 echo "$GITHUB_REPO_URL"
                 echo ""
                 echo "下载后请替换当前脚本文件"
+                show_separator
+                pause_and_continue
                 ;;
             3)
                 echo "请访问以下地址查看更新日志:"
                 echo "$GITHUB_REPO_URL"
                 echo ""
                 echo "或查看GitHub项目的提交历史"
+                show_separator
+                pause_and_continue
                 ;;
             0)
                 echo "取消更新"
+                pause_and_continue
                 ;;
             *)
                 echo "无效选择，取消更新"
+                pause_and_continue
                 ;;
         esac
     fi
@@ -1484,9 +1479,9 @@ update_script() {
     local backup_path="${script_path}.backup.$(date +%Y%m%d_%H%M%S)"
     
     if cp "$script_path" "$backup_path" 2>/dev/null; then
-        echo "✓ 备份已创建: $backup_path"
+        color_echo "32" "✓ 备份已创建: $backup_path"
     else
-        echo "⚠️ 无法创建备份，继续更新..."
+        color_echo "33" "⚠️ 无法创建备份，继续更新..."
     fi
     
     echo "正在更新脚本..."
@@ -1518,6 +1513,7 @@ update_script() {
 
 # 显示版本信息
 show_version_info() {
+    clear_screen
     echo "====== 版本信息 ======"
     echo "脚本名称: Seeder Improved"
     echo "当前版本: $SCRIPT_VERSION"
@@ -1539,7 +1535,8 @@ show_version_info() {
     echo "操作系统: $(uname -s)"
     echo "架构: $(uname -m)"
     echo "内核版本: $(uname -r)"
-    echo "=========================================="
+    show_separator
+    pause_and_continue
 }
 
 # 解析命令行参数
@@ -1619,7 +1616,8 @@ parse_arguments() {
 
 # 显示帮助信息
 show_help() {
-    echo "PT做种工具 - 命令行参数"
+    clear_screen
+    echo "====== Seeder Improved - 帮助信息 ======"
     echo ""
     echo "用法: $0 [选项]"
     echo ""
@@ -1644,6 +1642,8 @@ show_help() {
     echo "  $0 --dir /videos --announce http://tracker.example.com/announce --private --progress"
     echo "  $0 --generate-torrent"
     echo ""
+    show_separator
+    pause_and_continue
 }
 
 # 主流程
@@ -1652,9 +1652,11 @@ check_color_support
 check_and_install
 
 # 显示启动信息
-echo "Seeder Improved v$SCRIPT_VERSION 已启动"
+clear_screen
+echo "====== Seeder Improved v$SCRIPT_VERSION ======"
+echo "欢迎使用 PT 做种工具！"
 echo "输入 --help 查看帮助信息"
-echo "=========================================="
+echo ""
 
 # 解析命令行参数
 parse_arguments "$@"
